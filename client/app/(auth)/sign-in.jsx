@@ -46,7 +46,7 @@ const SignIn = () => {
   };
 
   return (
-    <SafeAreaView style={{ backgroundColor: '#F6F7F9', height: '100%' }}>
+    <SafeAreaView style={{ backgroundColor: '#ffff', height: '100%' }}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         <View
           style={{
@@ -69,7 +69,7 @@ const SignIn = () => {
             color: '#333',
             marginBottom: 10,
           }}>
-            FarmAI
+            Krishi Yog
           </Text>
           <Text style={{
             fontSize: 16,
@@ -87,7 +87,7 @@ const SignIn = () => {
             otherStyles={{
               marginTop: 20,
               borderRadius: 50,
-              backgroundColor: '#FFF',
+              backgroundColor: '#0000',
               padding: 15,
               borderColor: '#E0E0E0',
               borderWidth: 1,
