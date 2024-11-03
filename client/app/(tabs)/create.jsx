@@ -1,16 +1,10 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { router } from "expo-router";
-import * as DocumentPicker from "expo-document-picker";
+import * as ImagePicker from "expo-image-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  View,
-  Text,
-  Alert,
-  Image,
-  TouchableOpacity,
-  ScrollView,
-} from "react-native";
+import { View, Text, Alert, TouchableOpacity, Image } from "react-native";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { icons } from "../../constants";
 import { createImagePost } from "../../lib/appwrite";
 import { CustomButton, FormField } from "../../components";
@@ -25,28 +19,47 @@ const Create = () => {
     prompt: "",
   });
 
-  const openPicker = async (selectType) => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type:
-        selectType === "image" ? ["image/png", "image/jpg", "image/jpeg"] : [],
-    });
-
-    if (!result.canceled) {
-      if (selectType === "image") {
-        setForm({
-          ...form,
-          image: result.assets[0],
-        });
-      }
-    } else {
-      setTimeout(() => {
-        Alert.alert("Document picked", JSON.stringify(result, null, 2));
-      }, 100);
+  const requestPermission = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission Denied",
+        "Permission to access media is required!"
+      );
     }
   };
 
+  const openPicker = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setForm({
+        ...form,
+        image: result.uri || result.assets[0]?.uri, // Updated to handle new API structure
+      });
+    } else {
+      Alert.alert("No image selected");
+    }
+  };
+
+  const [selectedLang, setSelectedLang] = useState(0);
+
+  useEffect(() => {
+    getLang();
+  }, []);
+
+  const getLang = async () => {
+    const lang = await AsyncStorage.getItem("LANG");
+    setSelectedLang(parseInt(lang, 10));
+  };
+
   const submit = async () => {
-    if ((form.prompt === "") | (form.title === "") | !form.image) {
+    if (form.prompt === "" || form.title === "" || !form.image) {
       return Alert.alert("Please provide all fields");
     }
 
@@ -55,12 +68,13 @@ const Create = () => {
       await createImagePost({
         ...form,
         userId: user.$id,
+        imageUrl: form.image,
       });
 
-      Alert.alert("Success", "Post uploaded successfully");
+      Alert.alert("Success", "Image post uploaded successfully");
       router.push("/home");
     } catch (error) {
-      Alert.alert("Error", error.message);
+      Alert.alert("Error", error?.message || "An error occurred");
     } finally {
       setForm({
         title: "",
@@ -73,53 +87,78 @@ const Create = () => {
   };
 
   return (
-    <SafeAreaView className="bg-primary h-full">
-      <ScrollView className="px-4 my-6">
-        <Text className="text-2xl text-white font-psemibold">Upload Image</Text>
-
+    <SafeAreaView style={{ backgroundColor: "white", flex: 1 }}>
+      <View style={{ padding: 16, marginTop: 24 }}>
+        <Text
+          style={{
+            fontSize: 24,
+            color: "black",
+            fontWeight: "600",
+            marginBottom: 16,
+          }}
+        >
+          Upload Image
+        </Text>
         <FormField
           title="Image Title"
           value={form.title}
           placeholder="Give your image a catchy title..."
           handleChangeText={(e) => setForm({ ...form, title: e })}
-          otherStyles="mt-10"
+          otherStyles={{ marginTop: 10 }}
+          color="black"
         />
 
-        <View className="mt-7 space-y-2">
-          <Text className="text-base text-gray-100 font-pmedium">
-            Thumbnail Image
+        <View style={{ marginTop: 28 }}>
+          <Text style={{ fontSize: 16, color: "black", fontWeight: "500" }}>
+            Upload Image
           </Text>
-
-          <TouchableOpacity onPress={() => openPicker("image")}>
+          <TouchableOpacity onPress={openPicker}>
             {form.image ? (
               <Image
-                source={{ uri: form.image.uri }}
+                source={{ uri: form.image }}
                 resizeMode="cover"
-                className="w-full h-64 rounded-2xl"
+                style={{
+                  width: "100%",
+                  height: 256,
+                  borderRadius: 16,
+                  marginTop: 16,
+                }}
               />
             ) : (
-              <View className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 flex justify-center items-center flex-row space-x-2">
-                <Image
-                  source={icons.upload}
-                  resizeMode="contain"
-                  alt="upload"
-                  className="w-5 h-5"
-                />
-                <Text className="text-sm text-gray-100 font-pmedium">
-                  Choose a file
-                </Text>
+              <View
+                style={{
+                  width: "100%",
+                  height: 160,
+                  padding: 16,
+                  backgroundColor: "#f0f0f0",
+                  borderRadius: 16,
+                  borderColor: "#ccc",
+                  borderWidth: 1,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <View
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderColor: "#ddd",
+                    borderWidth: 1,
+                    borderStyle: "dashed",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <Image
+                    source={icons.upload}
+                    resizeMode="contain"
+                    style={{ width: "50%", height: "50%" }}
+                  />
+                </View>
               </View>
             )}
           </TouchableOpacity>
         </View>
-
-        <FormField
-          title="AI Prompt"
-          value={form.prompt}
-          placeholder="The AI prompt of your image...."
-          handleChangeText={(e) => setForm({ ...form, prompt: e })}
-          otherStyles="mt-7"
-        />
 
         <CustomButton
           title="Submit & Publish"
@@ -127,7 +166,7 @@ const Create = () => {
           containerStyles="mt-7"
           isLoading={uploading}
         />
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 };
