@@ -167,5 +167,5 @@ const Bookmark = () => {
     </SafeAreaView>
   );
 };
-asf;
+
 export default Bookmark;
